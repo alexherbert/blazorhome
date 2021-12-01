@@ -1,0 +1,40 @@
+﻿@using MudBlazor
+@inherits LayoutComponentBase
+
+<PageTitle>BlazorApp</PageTitle>
+
+<MudThemeProvider/>
+
+<MudLayout>
+    <MudAppBar Elevation="1">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())"/>
+        <MudText Typo="Typo.h5" Class="ml-3">Blazor App</MudText>
+        <MudSpacer/>
+        <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Color="Color.Inherit" Edge="Edge.End"/>
+    </MudAppBar>
+    <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
+        <MudNavMenu Class="mud-width-full">
+            <MudNavLink Href="/dashboard" Icon="@Icons.Filled.Dashboard">Dashboard</MudNavLink>
+            <MudNavLink Href="insert" Icon="@Icons.Filled.Storage">Insert</MudNavLink>
+            <MudNavLink Href="formcontrol" Icon="@Icons.Filled.Receipt">Form Controls</MudNavLink>
+            <MudNavLink Href="counterflux" Icon="@Icons.Filled.Receipt">Counter Flux</MudNavLink>
+            <MudNavGroup Title="Settings" Icon="@Icons.Filled.Settings" Expanded="true">
+                <MudNavLink Href="/users" Icon="@Icons.Filled.People" IconColor="Color.Success">Users</MudNavLink>
+                <MudNavLink Href="/security" Icon="@Icons.Filled.Security" IconColor="Color.Info">Security</MudNavLink>
+            </MudNavGroup>
+        </MudNavMenu>
+    </MudDrawer>
+    <MudMainContent>
+        @Body
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    bool _drawerOpen = true;
+
+    void DrawerToggle()
+    {
+        _drawerOpen = !_drawerOpen;
+    }
+
+}

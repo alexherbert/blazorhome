@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <TargetFramework>net6.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Fluxor.Blazor.Web" Version="4.2.1" />
+      <PackageReference Include="Fluxor.Blazor.Web.ReduxDevTools" Version="4.2.1" />
+      <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="6.0.0" />
+      <PackageReference Include="MudBlazor" Version="6.0.2" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Content Remove="Data\Elements.json" />
+      <EmbeddedResource Include="Data\Elements.json" />
+    </ItemGroup>
+
+</Project>

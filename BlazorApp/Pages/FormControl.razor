@@ -1,0 +1,10 @@
+@page "/formcontrol"
+
+<h1>@Message</h1>
+
+
+<input @bind="Message" @bind:event="oninput" width="200px"></input>
+
+@code {
+    private string Message { get; set; } = "Starting message before update";
+}

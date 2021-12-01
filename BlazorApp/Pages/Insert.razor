@@ -1,0 +1,158 @@
+@page "/insert"
+@using MudBlazor
+@using Microsoft.AspNetCore.SignalR.Client
+@using BlazorApp.Models
+@inject PeriodicTableService _periodicTableService
+@inject NavigationManager NavigationManager
+@implements IAsyncDisposable
+
+<MudTable Items="@Elements" Dense="@dense" Hover="@hover" Bordered="@bordered" Striped="@striped" Filter="new Func<Element, bool>(FilterFunc1)" @bind-SelectedItem="selectedItem1">
+    <ToolBarContent>
+        <MudText Typo="Typo.h6">Periodic Elements</MudText>
+        <MudSpacer/>
+        <MudTextField @bind-Value="searchString1" Placeholder="Search" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+    </ToolBarContent>
+    <HeaderContent>
+        <MudTh>Nr</MudTh>
+        <MudTh>Sign</MudTh>
+        <MudTh>Name</MudTh>
+        <MudTh>Position</MudTh>
+        <MudTh>Molar mass</MudTh>
+        <MudTh></MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Nr">@context.Number</MudTd>
+        <MudTd DataLabel="Sign">@context.Sign</MudTd>
+        <MudTd DataLabel="Name">@context.Name</MudTd>
+        <MudTd DataLabel="Position">@context.Position</MudTd>
+        <MudTd DataLabel="Molar mass">@context.Molar</MudTd>
+        <MudTh></MudTh>
+    </RowTemplate>
+    <PagerContent>
+        <MudTablePager/>
+    </PagerContent>
+</MudTable>
+
+<div class="d-flex flex-wrap mt-4">
+    <MudSwitch @bind-Checked="@hover" Color="Color.Primary">Hover</MudSwitch>
+    <MudSwitch @bind-Checked="@dense" Color="Color.Secondary">Dense</MudSwitch>
+    <MudSwitch @bind-Checked="@striped" Color="Color.Tertiary">Striped</MudSwitch>
+    <MudSwitch @bind-Checked="@bordered" Color="Color.Warning">Bordered</MudSwitch>
+    <MudSpacer/>
+    <div style="min-width:200px;">
+        <MudText Inline="true" Class="align-self-center">Selected1: @selectedItem1?.Name</MudText>
+        <MudText Inline="true" Class="align-self-center">Selected2: @selectedItem2?.Name</MudText>
+    </div>
+</div>
+
+<MudPaper Height="400px" Width="100%">
+    <MudContainer Fixed="true">
+        @if (!_userMessages.Any())
+        {
+            <MudAlert Severity="Severity.Normal">No messages sent or received</MudAlert>     
+        }
+        @foreach (var message in _userMessages)
+        {
+            <MudAlert Severity="Severity.Success">@($"{message.User}:{message.Message}")</MudAlert>   
+        }
+        
+    </MudContainer>
+</MudPaper>
+<span>@($"Connection status: {@connectionStatus}")</span>
+<MudPaper Height="100px" Width="100%">
+    <MudContainer Fixed="true">
+        <MudGrid>
+            <MudItem xs="12" sm="6" md="4">
+                <MudTextField @bind-value="usernameInput" T="string" Label="Username" HelperText="Enter user name" HelperTextOnFocus="true" Variant="Variant.Text"/>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="4">
+                <MudTextField @bind-value="messageInput" T="string" Label="Message" HelperText="Start typing" Variant="Variant.Text"/>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="4">
+                <MudButton Variant="Variant.Filled" EndIcon="@Icons.Material.Filled.Send" Color="Color.Primary" Disabled="@(!IsConnected)" OnClick="@(() => Send())">Send</MudButton>
+            </MudItem>
+        </MudGrid>
+    </MudContainer>
+</MudPaper>
+
+@code {
+    private bool dense = true;
+    private bool hover = true;
+    private bool striped = true;
+    private bool bordered = true;
+    private string searchString1 = "";
+    private string searchString2 = "";
+    private Element selectedItem1 = null;
+    private Element selectedItem2 = null;
+    private HashSet<Element> selectedItems = new HashSet<Element>();
+    private HubConnection _hubConnection;
+    private List<UserMessage> _userMessages = new();
+    private string usernameInput;
+    private string messageInput;
+    private bool isUserReadonly = false;
+    private string connectionStatus => _hubConnection.State.ToString();
+
+    private bool IsConnected => _hubConnection.State == HubConnectionState.Connected;
+
+    private IEnumerable<Element> Elements = new List<Element>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _hubConnection = new HubConnectionBuilder()
+            .WithUrl(NavigationManager.ToAbsoluteUri("/chathub"))
+            .Build();
+
+        _hubConnection.On<string, string>("ReceiveMessage", (user, message) =>
+        {
+            _userMessages.Add(new UserMessage()
+            {
+                Message = message,
+                User = user,
+                DateSent = DateTime.Now,
+                IsCurrentUser = user == usernameInput
+            });
+            
+            StateHasChanged();
+        });
+
+        await _hubConnection.StartAsync();
+
+        Elements = await _periodicTableService.GetElements();
+    }
+
+    private async Task Send()
+    {
+        if (!string.IsNullOrEmpty(usernameInput) && !string.IsNullOrEmpty(messageInput))
+        {
+            await _hubConnection.SendAsync("SendMessage", usernameInput, messageInput);
+            isUserReadonly = true;
+            messageInput = string.Empty;
+            StateHasChanged();
+        }
+    }
+
+    private bool FilterFunc1(Element element) => FilterFunc(element, searchString1);
+    private bool FilterFunc2(Element element) => FilterFunc(element, searchString2);
+
+    private bool FilterFunc(Element element, string searchString)
+    {
+        if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+        if (element.Sign.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (element.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        if ($"{element.Number} {element.Position} {element.Molar}".Contains(searchString))
+            return true;
+        return false;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_hubConnection is not null)
+        {
+            await _hubConnection.DisposeAsync();
+        }
+    }
+
+}
